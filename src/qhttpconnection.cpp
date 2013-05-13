@@ -87,6 +87,11 @@ void QHttpConnection::parseRequest()
     }
 }
 
+void QHttpConnection::requestDestroyed()
+{
+    m_request = 0;
+}
+
 void QHttpConnection::write(const QByteArray &data)
 {
     m_socket->write(data);
@@ -104,7 +109,13 @@ int QHttpConnection::MessageBegin(http_parser *parser)
 {
     QHttpConnection *theConnection = (QHttpConnection *)parser->data;
     theConnection->m_currentHeaders.clear();
+    if(theConnection->m_request) {
+      disconnect(theConnection->m_request, SIGNAL(destroyed()),
+          theConnection, SLOT(requestDestroyed));
+    }
     theConnection->m_request = new QHttpRequest(theConnection);
+    connect(theConnection->m_request, SIGNAL(destroyed()),
+        theConnection, SLOT(requestDestroyed()));
     return 0;
 }
 
